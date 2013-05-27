@@ -13,14 +13,14 @@
 	//Drupal Database Name, Username and Password
 	$DB_DP_USERNAME	= 'user';
 	$DB_DP_PASSWORD	= 'pass';
-	$DB_DRUPAL		= 'database';
+	$DB_DRUPAL	= 'database';
 
 	//Table Prefix
 	$DB_WORDPRESS_PREFIX = 'wp_';
-	$DB_DRUPAL_PREFIX	 = '';
+	$DB_DRUPAL_PREFIX    = '';
 
 	//Create Connection Array for Drupal and Wordpress
-	$drupal_connection		= array("host" => "localhost","username" => $DB_DP_USERNAME,"password" => $DB_DP_PASSWORD,"database" => $DB_DRUPAL);
+	$drupal_connection	= array("host" => "localhost","username" => $DB_DP_USERNAME,"password" => $DB_DP_PASSWORD,"database" => $DB_DRUPAL);
 	$wordpress_connection	= array("host" => "localhost","username" => $DB_WP_USERNAME,"password" => $DB_WP_PASSWORD,"database" => $DB_WORDPRESS);
 
 	//Create Connection for Drupal and Wordpress
@@ -116,6 +116,33 @@
 
 	//Update Comment Counts in Wordpress
 	$wc->query("UPDATE ".$DB_WORDPRESS_PREFIX."posts SET comment_count = ( SELECT COUNT(comment_post_id) FROM ".$DB_WORDPRESS_PREFIX."comments WHERE ".$DB_WORDPRESS_PREFIX."posts.id = ".$DB_WORDPRESS_PREFIX."comments.comment_post_id )");
+
+	//Get all files in content_field_images from Drupal and add it into wordpress posts table, then add the featured image to postmeta
+	$drupal_files = $dc->results("SELECT DISTINCT f.fid, f.uid AS post_author, FROM_UNIXTIME(f.timestamp) AS post_date, f.filename, f.filepath, f.filemime AS post_mime_type, cfp.nid, cfp.vid, n.vid FROM ".$DB_DRUPAL_PREFIX."files f, ".$DB_DRUPAL_PREFIX."content_field_photo cfp, ".$DB_DRUPAL_PREFIX."node n WHERE (f.fid = cfp.field_photo_fid AND cfp.vid = n.vid)");
+    	foreach($drupal_files as $dp)
+	{
+		$wc->query("INSERT INTO ".$DB_WORDPRESS_PREFIX."posts (post_author, post_date, post_title, post_name, post_parent, post_type, post_mime_type, post_status) VALUES ('%s','%s','%s','%s','%s','%s','%s','%s')", 1, $dp['post_date'], $dp['filename'], $dp['filepath'], $dp['nid'], 'attachment', $dp['post_mime_type'], 'inherit');
+	        $post_id = $wc->row("SELECT ID FROM ".$DB_WORDPRESS_PREFIX."posts WHERE post_name = '%s'", $dp['filepath']);
+	        $wc->query("INSERT INTO ".$DB_WORDPRESS_PREFIX."postmeta (post_id, meta_key, meta_value) VALUES ('%s','%s','%s')", $dp['nid'], '_thumbnail_id', $post_id['ID']);
+	        $wc->query("INSERT INTO ".$DB_WORDPRESS_PREFIX."postmeta (post_id, meta_key, meta_value) VALUES ('%s','%s','%s')", $post_id['ID'], '_wp_attached_file', $dp['filepath']);
+	}
+	
+	// Try and correct the above because wordpress lies about images in the latest revision for a node
+	$drupal_files = $dc->results("SELECT DISTINCT f.fid, f.uid AS post_author, FROM_UNIXTIME(f.timestamp) AS post_date, f.filename, f.filepath, f.filemime AS post_mime_type, ctb.field_photo_square_fid, n.nid, n.vid FROM ".$DB_DRUPAL_PREFIX."files f, ".$DB_DRUPAL_PREFIX."content_type_blog ctb, ".$DB_DRUPAL_PREFIX."node n WHERE (f.fid = ctb.field_photo_square_fid AND ctb.vid = n.vid)");
+	foreach($drupal_files as $dp)
+	{
+	    	$post_id = $wc->row("SELECT ID FROM ".$DB_WORDPRESS_PREFIX."posts WHERE post_name = '%s'", $dp['filepath']);
+        	$wc->query("UPDATE ".$DB_WORDPRESS_PREFIX."posts SET post_name = '%s' WHERE ID = '%s'", $dp['filepath'], $post_id['ID']);
+        	$wc->query("UPDATE ".$DB_WORDPRESS_PREFIX."postmeta SET meta_value = '%s' WHERE post_id = '%s'", $dp['filepath'], $post_id['ID']);
+    	}
+    	
+    	// Make the links to files URL encoded so they are actually accessible when full of nasty unsanitized characters we don't want to rename
+    	$wordpress_files = $wc->results("SELECT post_id, meta_value FROM ".$DB_WORDPRESS_PREFIX."postmeta WHERE meta_key = '_wp_attached_file'");
+	foreach($wordpress_files as $wf)
+	{
+        	$path = preg_replace('/%2F/', '/', rawurlencode($wf['meta_value']));
+        	$wc->query("UPDATE ".$DB_WORDPRESS_PREFIX."postmeta SET meta_value = '%s' WHERE post_id = '%s' AND meta_key = '_wp_attached_file'",  $path, $wf['post_id']);
+	}
 
 	message('Cheers !!');
 
