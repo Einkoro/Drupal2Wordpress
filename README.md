@@ -1,9 +1,10 @@
+Drupal 7 to Wordpress 3.x
+=======
+
+You probably want this one instead:
+https://github.com/robinflyhigh/Drupal2Wordpress
+
 Drupal 6 to Wordpress 3.x
 =======
 
-This script can you used to move your drupal 6 site to wordpress, logic has been borrowed from http://fuzzythinking.davidmullens.com/content/moving-from-drupal-7-to-wordpress-3-3/ but it did not ran correclty for me and hence thought of making a PHP script and make it work step by step
-
-To Do
-=======
-
-User Migration is not implemented yet as my site have only one admin users but would work as soon as I find some time.
+You still might not want this one as the files/media related queries are probably rather site specific and all around rather dirty. Doesn't hurt to try provided you backup first.
