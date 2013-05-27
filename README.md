@@ -1,7 +1,7 @@
-Drupal 7 to Wordpress 3.x
+Drupal 6 to Wordpress 3.x
 =======
 
-This script can you used to move your drupal 7 site to wordpress, logic has been borrowed from http://fuzzythinking.davidmullens.com/content/moving-from-drupal-7-to-wordpress-3-3/ but it did not ran correclty for me and hence thought of making a PHP script and make it work step by step
+This script can you used to move your drupal 6 site to wordpress, logic has been borrowed from http://fuzzythinking.davidmullens.com/content/moving-from-drupal-7-to-wordpress-3-3/ but it did not ran correclty for me and hence thought of making a PHP script and make it work step by step
 
 To Do
 =======
